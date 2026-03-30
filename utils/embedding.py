@@ -17,12 +17,34 @@ class EmbeddingModel:
         self.use_optimization = use_optimization
         
         print(f"Loading embedding model: {self.model_name}")
+
+        is_local_model_path = self._is_local_model_path(self.model_name)
+        if is_local_model_path:
+            print(f"[EmbeddingModel] Detected local model path: {self.model_name}")
+            print("[EmbeddingModel] Forcing Qwen3-specific initialization branch for local path")
         
         # Check if it's a Qwen3 model (through SentenceTransformers)
-        if self.model_name.startswith("qwen3"):
+        if is_local_model_path or self.model_name.startswith("qwen3"):
+            if self.model_name.startswith("qwen3"):
+                print("[EmbeddingModel] Qwen3 model alias detected, using Qwen3-specific branch")
             self._init_qwen3_sentence_transformer()
         else:
             self._init_standard_sentence_transformer()
+
+    @staticmethod
+    def _is_local_model_path(model_name: str) -> bool:
+        """Detect whether `model_name` is a local filesystem path."""
+        if not model_name:
+            return False
+
+        expanded = os.path.expanduser(model_name)
+        return (
+            os.path.isabs(expanded)
+            or model_name.startswith("./")
+            or model_name.startswith("../")
+            or model_name.startswith("~")
+            or os.path.exists(expanded)
+        )
 
     def _init_qwen3_sentence_transformer(self):
         """Initialize Qwen3 model using SentenceTransformers"""
