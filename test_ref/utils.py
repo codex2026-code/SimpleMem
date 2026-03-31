@@ -1,5 +1,6 @@
 import re
 import string
+import os
 import numpy as np
 from typing import List, Dict, Union
 import statistics
@@ -68,7 +69,20 @@ def calculate_bleu_scores(prediction: str, reference: str) -> Dict[str, float]:
 def calculate_bert_scores(prediction: str, reference: str) -> Dict[str, float]:
     """Calculate BERTScore for semantic similarity."""
     try:
-        P, R, F1 = bert_score([prediction], [reference], lang='en', verbose=False)
+        model_type = os.getenv("BERTSCORE_MODEL_TYPE")
+        num_layers = os.getenv("BERTSCORE_NUM_LAYERS")
+
+        score_kwargs = {
+            "verbose": False,
+        }
+        if model_type:
+            score_kwargs["model_type"] = model_type
+            if num_layers:
+                score_kwargs["num_layers"] = int(num_layers)
+        else:
+            score_kwargs["lang"] = "en"
+
+        P, R, F1 = bert_score([prediction], [reference], **score_kwargs)
         return {
             'bert_precision': P.item(),
             'bert_recall': R.item(),
@@ -76,6 +90,10 @@ def calculate_bert_scores(prediction: str, reference: str) -> Dict[str, float]:
         }
     except Exception as e:
         print(f"Error calculating BERTScore: {e}")
+        print(
+            "Hint: set BERTSCORE_MODEL_TYPE to a local model path "
+            "(for offline runs) or pre-download required Hugging Face files."
+        )
         return {
             'bert_precision': 0.0,
             'bert_recall': 0.0,
